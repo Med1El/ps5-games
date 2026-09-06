@@ -1,0 +1,21 @@
+{
+  "name": "ps5-game-filter",
+  "version": "1.0.0",
+  "description": "PS5 game scraper and filter app",
+  "main": "server.js",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "start": "node server.js",
+    "migrate": "node scripts/migrate-to-nested.js",
+    "gemini:test": "node scripts/gemini-enrich.js --test",
+    "gemini:run": "node scripts/gemini-enrich.js --apply",
+    "gemini:apply": "node scripts/apply-gemini-enrichment.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "express": "^4.19.2",
+    "lowdb": "2.1.0"
+  }
+}

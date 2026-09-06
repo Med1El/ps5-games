@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PS5 Game Filter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --accent: #003791;
+    --accent2: #00439c;
+    --text: #e8e8f0;
+    --muted: #888;
+    --score-green: #4ade80;
+    --score-yellow: #facc15;
+    --score-red: #f87171;
+    --fav: #f59e0b;
+    --snoozed: #38bdf8;
+    --played: #4ade80;
+    --upnext: #a78bfa;
+    --danger: #f87171;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: linear-gradient(135deg, #003791 0%, #00439c 50%, #0070cc 100%);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 12px rgba(0,55,145,0.4);
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  header span { font-size: 0.85rem; opacity: 0.7; margin-left: auto; }
+
+  .layout { display: flex; flex: 1; min-height: 0; }
+
+  /* ── Sidebar ──────────────────────────────────────────────── */
+  aside {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .filter-section h3 {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent2); }
+
+  .range-group { display: flex; flex-direction: column; gap: 8px; }
+  .range-labels { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+  .range-labels span { background: var(--surface2); padding: 2px 6px; border-radius: 4px; color: var(--text); font-weight: 600; }
+  .range-track { position: relative; height: 20px; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent2);
+    cursor: pointer;
+    pointer-events: all;
+    border: 2px solid var(--text);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent2);
+    cursor: pointer;
+    pointer-events: all;
+    border: 2px solid var(--text);
+  }
+  .range-track input[type=range]:last-child { z-index: 1; }
+
+  .genre-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .genre-chip { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .genre-chip input { display: none; }
+  .genre-chip span {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .genre-chip input:checked + span { background: var(--accent); border-color: var(--accent2); color: #fff; }
+
+  .sort-row { display: flex; gap: 8px; }
+  .sort-row select {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .toggle-group { display: flex; gap: 6px; }
+  .toggle-btn {
+    flex: 1;
+    padding: 5px 0;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    user-select: none;
+  }
+  .toggle-btn.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+
+  .btn-reset {
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: all 0.15s;
+  }
+  .btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* View tabs — two rows of tabs */
+  .view-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .view-tabs-row {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border);
+  }
+  .view-tab {
+    flex: 1;
+    padding: 6px 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .view-tab.active           { background: var(--accent); color: #fff; }
+  .view-tab.fav-tab.active   { background: var(--fav); color: #000; }
+  .view-tab.hidden-tab.active{ background: #3a3a4a; color: var(--text); }
+  .view-tab.played-tab.active   { background: var(--played); color: #000; }
+  .view-tab.upnext-tab.active   { background: var(--upnext); color: #fff; }
+  .view-tab.snoozed-tab.active { background: var(--snoozed); color: #fff; }
+
+  /* Hidden panel — collapsible */
+  .hidden-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .hidden-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .hidden-panel-header:hover { background: rgba(255,255,255,0.03); }
+  .hidden-panel-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    flex: 1;
+  }
+  .hidden-panel-count {
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .hidden-panel-chevron {
+    font-size: 0.65rem;
+    color: var(--muted);
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+  .hidden-panel.collapsed .hidden-panel-chevron { transform: rotate(-90deg); }
+  .hidden-panel-body {
+    padding: 0 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .hidden-panel.collapsed .hidden-panel-body { display: none; }
+  .hidden-panel-actions { display: flex; justify-content: flex-end; }
+  .hidden-panel-actions button {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .hidden-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+  .hidden-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+    background: var(--surface);
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+  .hidden-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .hidden-item button {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .hidden-item button:hover { border-color: var(--score-green); color: var(--score-green); }
+  .hidden-empty { font-size: 0.75rem; color: var(--muted); text-align: center; padding: 8px; }
+
+  /* ── Main ──────────────────────────────────────────────────── */
+  main { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  .result-bar { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; }
+  .result-bar strong { color: var(--text); }
+
+  .load-more-wrap { text-align: center; padding: 8px; }
+  .btn-load {
+    padding: 8px 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .btn-load:hover { border-color: var(--accent2); color: #fff; }
+
+  /* ── Game Grid ─────────────────────────────────────────────── */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.15s, border-color 0.15s;
+    cursor: default;
+    position: relative;
+  }
+  .game-card:hover { transform: translateY(-2px); border-color: var(--accent2); }
+  .game-card.is-fav      { border-color: var(--fav); }
+  .game-card.is-snoozed { border-color: var(--snoozed); }
+  .game-card.is-played   { border-color: var(--played); }
+  .game-card.is-upnext   { border-color: var(--upnext); }
+
+  .dlc-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--upnext);
+    color: #fff;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 4px;
+  }
+  .game-card.is-hidden-card { opacity: 0.7; filter: saturate(0.5); }
+  .game-card.is-hidden-card:hover { opacity: 1; filter: none; }
+
+  .card-thumb {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: var(--surface2);
+  }
+  .card-thumb img {
+    width: 100%;
+    height: 240px;
+    object-fit: fill;
+    display: block;
+  }
+  .card-thumb img.broken { opacity: 0.2; }
+
+  .score-badge {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+  }
+  .score-badge.great { color: var(--score-green); border-color: var(--score-green); }
+  .score-badge.ok    { color: var(--score-yellow); border-color: var(--score-yellow); }
+  .score-badge.bad   { color: var(--score-red); border-color: var(--score-red); }
+  .score-badge.na    { color: var(--muted); }
+
+  /* Card action buttons overlay */
+  .card-actions {
+    position: absolute;
+    top: 6px; left: 6px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .game-card:hover .card-actions { opacity: 1; }
+  .card-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    transition: background 0.15s;
+    color: var(--muted);
+  }
+  .card-btn:hover { background: rgba(0,0,0,0.95); }
+  .card-btn.fav-btn { color: var(--muted); }
+  .card-btn.fav-btn.active { color: var(--fav); }
+  .card-btn.hide-btn:hover { color: var(--danger); }
+  .card-btn.edit-btn:hover { color: #60a5fa; }
+
+  .card-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-title a { color: var(--text); text-decoration: none; }
+  .card-title a:hover { color: #60a5fa; }
+  .card-genres { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+  .stat { font-size: 0.72rem; }
+  .stat .label { color: var(--muted); }
+  .stat .value { font-weight: 600; }
+  .card-date { font-size: 0.7rem; color: var(--muted); }
+
+  .spinner {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; color: var(--muted); font-size: 0.9rem;
+  }
+  .spinner::before {
+    content: '';
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    margin-right: 10px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+
+  /* ── Edit Modal ─────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .modal h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .modal h2 span { color: #60a5fa; font-size: 0.85rem; font-weight: 400; flex-shrink: 0; }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-field { display: flex; flex-direction: column; gap: 4px; }
+  .modal-field.full { grid-column: 1 / -1; }
+  .modal-field label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal-field input[type=number],
+  .modal-field input[type=text] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .modal-field input:focus { border-color: var(--accent2); }
+
+  .offline-toggle { display: flex; gap: 6px; }
+  .offline-opt {
+    flex: 1;
+    padding: 7px 4px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .offline-opt.active { background: var(--accent); border-color: var(--accent2); color: #fff; }
+
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-save {
+    padding: 8px 20px;
+    background: var(--accent2);
+    border: none;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .btn-save:hover { background: #0055cc; }
+  .btn-cancel {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  .save-status { font-size: 0.78rem; color: var(--score-green); align-self: center; }
+  .save-status.err { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8.984 4.998L8.984 18.155L12.25 19.149L12.25 8.101L15.141 8.983L15.141 19.949L18.391 20.999L18.391 9.999C18.391 9.999 18.414 8.502 16.984 7.998L10.594 5.998C10.594 5.998 8.984 5.489 8.984 4.998Z"/><path d="M5 18.07c0 1.1.969 1.689 2.164 1.317l1.82-.571V16.5l-2.71.85C5.417 17.697 5 17.91 5 18.07Z"/></svg>
+  <h1>PS5 Game Filter</h1>
+  <span id="db-count">Loading…</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <!-- View tabs — row 1 -->
+    <div class="filter-section">
+      <div class="view-tabs">
+        <div class="view-tabs-row">
+			<button class="view-tab snoozed-tab" id="tabSnoozed">💤 Snoozed</button>
+			<button class="view-tab played-tab" id="tabPlayed">✅ Played</button>
+			<button class="view-tab hidden-tab" id="tabHidden">🚫 Hidden</button>
+        </div>
+        <div class="view-tabs-row">
+			<button class="view-tab active" id="tabAll">All</button>
+          <button class="view-tab fav-tab" id="tabFav">⭐ Favs</button>
+          <button class="view-tab upnext-tab" id="tabUpnext">🎮 Up Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden games panel — collapsible -->
+    <div class="hidden-panel collapsed" id="hiddenPanel">
+      <div class="hidden-panel-header" id="hiddenPanelToggle">
+        <span class="hidden-panel-title">Hidden Games</span>
+        <span class="hidden-panel-count" id="hiddenCount">0</span>
+        <span class="hidden-panel-chevron">▼</span>
+      </div>
+      <div class="hidden-panel-body">
+        <div class="hidden-panel-actions">
+          <button id="btnUnhideAll">Unhide All</button>
+        </div>
+        <div class="hidden-list" id="hiddenList">
+          <div class="hidden-empty">No hidden games.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="filter-section search-wrap">
+      <h3>Search</h3>
+      <input type="text" id="search" placeholder="Game name…">
+    </div>
+
+    <!-- Score -->
+    <div class="filter-section">
+      <h3>Critic Score</h3>
+      <div class="range-group">
+        <div class="range-labels"><span id="scoreMinLbl">0</span><span id="scoreMaxLbl">100</span></div>
+        <div class="range-track">
+          <input type="range" id="scoreMin" min="0" max="100" value="0" step="1">
+          <input type="range" id="scoreMax" min="0" max="100" value="100" step="1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Initial Size -->
+    <div class="filter-section">
+      <h3>Initial Download Size (GB)</h3>
+      <div class="range-group">
+        <div class="range-labels"><span id="sizeInitialMinLbl">0</span><span id="sizeInitialMaxLbl">200</span></div>
+        <div class="range-track">
+          <input type="range" id="sizeInitialMin" min="0" max="200" value="0" step="0.5">
+          <input type="range" id="sizeInitialMax" min="0" max="200" value="200" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Size -->
+    <div class="filter-section">
+      <h3>Final Size (after updates, GB)</h3>
+      <div class="range-group">
+        <div class="range-labels"><span id="sizeFinalMinLbl">0</span><span id="sizeFinalMaxLbl">300</span></div>
+        <div class="range-track">
+          <input type="range" id="sizeFinalMin" min="0" max="300" value="0" step="0.5">
+          <input type="range" id="sizeFinalMax" min="0" max="300" value="300" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- DLC Size -->
+    <div class="filter-section">
+      <h3>DLC Size (GB)</h3>
+      <div class="range-group">
+        <div class="range-labels"><span id="sizeDlcMinLbl">0</span><span id="sizeDlcMaxLbl">100</span></div>
+        <div class="range-track">
+          <input type="range" id="sizeDlcMin" min="0" max="100" value="0" step="0.5">
+          <input type="range" id="sizeDlcMax" min="0" max="100" value="100" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Downloads -->
+    <div class="filter-section">
+      <h3>Estimated Downloads (M)</h3>
+      <div class="range-group">
+        <div class="range-labels"><span id="downloadsMinLbl">0</span><span id="downloadsMaxLbl">100</span></div>
+        <div class="range-track">
+          <input type="range" id="downloadsMin" min="0" max="100" value="0" step="0.5">
+          <input type="range" id="downloadsMax" min="0" max="100" value="100" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Genres -->
+    <div class="filter-section">
+      <h3>Genres</h3>
+      <div class="genre-list" id="genreList">Loading…</div>
+    </div>
+
+    <!-- Offline Only -->
+    <div class="filter-section">
+      <h3>Connectivity</h3>
+      <div class="toggle-group">
+        <div class="toggle-btn active" id="offlineAll">All</div>
+        <div class="toggle-btn" id="offlineYes">Offline only</div>
+        <div class="toggle-btn" id="offlineNo">Online req.</div>
+      </div>
+    </div>
+
+    <!-- DLC filter -->
+    <div class="filter-section">
+      <h3>Game Type</h3>
+      <div class="toggle-group">
+        <div class="toggle-btn active" id="dlcAll">All</div>
+        <div class="toggle-btn" id="dlcNo">Games only</div>
+        <div class="toggle-btn" id="dlcYes">DLC only</div>
+      </div>
+    </div>
+
+    <!-- Sort -->
+    <div class="filter-section">
+      <h3>Sort By</h3>
+      <div class="sort-row">
+        <select id="sort">
+          <option value="score">Score</option>
+          <option value="name">Name</option>
+          <option value="sizeInitial">Initial Size</option>
+          <option value="sizeFinal">Final Size</option>
+          <option value="sizeDlc">DLC Size</option>
+          <option value="downloads">Downloads</option>
+        </select>
+        <select id="order">
+          <option value="desc">↓ Desc</option>
+          <option value="asc">↑ Asc</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-reset" id="btnReset">Reset Filters</button>
+  </aside>
+
+  <main>
+    <div class="result-bar">
+      <span>Showing <strong id="resultCount">—</strong> of <strong id="totalCount">—</strong> games</span>
+    </div>
+    <div class="game-grid" id="gameGrid"></div>
+    <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+      <button class="btn-load" id="btnLoadMore">Load More</button>
+    </div>
+  </main>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <h2 id="modalTitle">Edit Game <button class="modal-close" id="modalClose">✕</button></h2>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <label>Launch Size (GB)</label>
+        <input type="number" id="editSizeInitial" step="0.1" min="0">
+      </div>
+      <div class="modal-field">
+        <label>Final Size (GB)</label>
+        <input type="number" id="editSizeFinal" step="0.1" min="0">
+      </div>
+      <div class="modal-field">
+        <label>DLC Size (GB)</label>
+        <input type="number" id="editSizeDlc" step="0.1" min="0">
+      </div>
+      <div class="modal-field">
+        <label>Est. Downloads (M)</label>
+        <input type="number" id="editDownloads" step="0.01" min="0">
+      </div>
+      <div class="modal-field full">
+        <label>Genres (comma-separated)</label>
+        <input type="text" id="editGenres" placeholder="Action, RPG, Adventure…">
+      </div>
+      <div class="modal-field full">
+        <label>Connectivity</label>
+        <div class="offline-toggle">
+          <div class="offline-opt" id="editOfflineNull" data-val="null">Unknown</div>
+          <div class="offline-opt" id="editOfflineTrue" data-val="true">📴 Offline Only</div>
+          <div class="offline-opt" id="editOfflineFalse" data-val="false">🌐 Online Required</div>
+        </div>
+      </div>
+      <div class="modal-field full">
+        <label>Is DLC / Add-on</label>
+        <div class="offline-toggle">
+          <div class="offline-opt" id="editIsDlcNull" data-dlc="null">Unknown</div>
+          <div class="offline-opt" id="editIsDlcFalse" data-dlc="false">🎮 Full Game</div>
+          <div class="offline-opt" id="editIsDlcTrue" data-dlc="true">📦 DLC / Add-on</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <span class="save-status" id="saveStatus"></span>
+      <button class="btn-cancel" id="btnCancel">Cancel</button>
+      <button class="btn-save" id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LIMIT = 80;
+let offset = 0;
+let totalResults = 0;
+let debounceTimer = null;
+let meta = null;
+let offlineFilter = null;
+let currentView = 'all'; // 'all' | 'fav' | 'hidden' | 'played' | 'upnext' | 'snoozed'
+let editingGame = null;
+let editOfflineVal = null; // null | true | false
+let editIsDlcVal   = null; // null | true | false
+let isDlcFilter = null;   // null = all, true = DLC only, false = games only
+
+// ── localStorage helpers ──────────────────────────────────────────────────────
+function getSet(key) { try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { return new Set(); } }
+function saveSet(key, s) { localStorage.setItem(key, JSON.stringify([...s])); }
+
+function getFavs()   { return getSet('ps5_favs'); }
+function saveFavs(s) { saveSet('ps5_favs', s); }
+function getHidden()   { return getSet('ps5_hidden'); }
+function saveHidden(s) { saveSet('ps5_hidden', s); }
+function getPlayed()   { return getSet('ps5_played'); }
+function savePlayed(s) { saveSet('ps5_played', s); }
+function getUpnext()     { return getSet('ps5_upnext'); }
+function saveUpnext(s)   { saveSet('ps5_upnext', s); }
+function getSnoozed()   { return getSet('ps5_snoozed'); }
+function saveSnoozed(s) { saveSet('ps5_snoozed', s); }
+
+// Toggle helpers — all 4 lists are fully independent
+function toggleFav(id) {
+  const favs = getFavs();
+  favs.has(id) ? favs.delete(id) : favs.add(id);
+  saveFavs(favs);
+  document.querySelector(`.fav-btn[data-id="${id}"]`)?.classList.toggle('active', favs.has(id));
+  document.querySelector(`.game-card[data-id="${id}"]`)?.classList.toggle('is-fav', favs.has(id));
+  if (currentView === 'fav') fetchAndRender(false);
+}
+
+function togglePlayed(id) {
+  const played = getPlayed();
+  played.has(id) ? played.delete(id) : played.add(id);
+  savePlayed(played);
+  refreshCardListClasses(id);
+  // If now played, remove from 'all' view immediately (like hide)
+  if (played.has(id) && currentView === 'all') {
+    document.querySelector(`.game-card[data-id="${id}"]`)?.remove();
+  } else if (currentView === 'played') {
+    fetchAndRender(false);
+  }
+}
+
+function toggleUpnext(id) {
+  const upnext = getUpnext();
+  upnext.has(id) ? upnext.delete(id) : upnext.add(id);
+  saveUpnext(upnext);
+  refreshCardListClasses(id);
+  if (currentView === 'upnext') fetchAndRender(false);
+}
+
+function toggleSnoozed(id) {
+  const snoozed = getSnoozed();
+  snoozed.has(id) ? snoozed.delete(id) : snoozed.add(id);
+  saveSnoozed(snoozed);
+  refreshCardListClasses(id);
+  if (currentView === 'snoozed') fetchAndRender(false);
+  else if (currentView === 'all' && snoozed.has(id)) {
+    document.querySelector(`.game-card[data-id="${id}"]`)?.remove();
+  }
+}
+
+function refreshCardListClasses(id) {
+  const card = document.querySelector(`.game-card[data-id="${id}"]`);
+  if (!card) return;
+  card.classList.toggle('is-played',   getPlayed().has(id));
+  card.classList.toggle('is-upnext',   getUpnext().has(id));
+  card.classList.toggle('is-snoozed', getSnoozed().has(id));
+  card.querySelector('.played-btn')?.classList.toggle('active',   getPlayed().has(id));
+  card.querySelector('.upnext-btn')?.classList.toggle('active',   getUpnext().has(id));
+  card.querySelector('.snoozed-btn')?.classList.toggle('active', getSnoozed().has(id));
+}
+
+function hideGame(id) {
+  const hidden = getHidden();
+  hidden.add(id);
+  saveHidden(hidden);
+  if (currentView === 'all') {
+    document.querySelector(`.game-card[data-id="${id}"]`)?.remove();
+  } else {
+    const card = document.querySelector(`.game-card[data-id="${id}"]`);
+    if (card) {
+      card.classList.add('is-hidden-card');
+      const hideBtn = card.querySelector('[data-action="hide"]');
+      if (hideBtn) {
+        hideBtn.outerHTML = `<button class="card-btn" data-unhide="${id}" title="Unhide" style="color:var(--score-green)">👁</button>`;
+      }
+    }
+  }
+  renderHiddenPanel();
+}
+
+function unhideGame(id) {
+  const hidden = getHidden();
+  hidden.delete(id);
+  saveHidden(hidden);
+  renderHiddenPanel();
+  if (currentView === 'hidden') {
+    renderHiddenView();
+  } else if (currentView === 'all') {
+    fetchAndRender(false);
+  } else {
+    // In list view: restore the card from greyed-out to normal
+    const card = document.querySelector(`.game-card[data-id="${id}"]`);
+    if (card) {
+      card.classList.remove('is-hidden-card');
+      const unhideBtn = card.querySelector('[data-unhide]');
+      if (unhideBtn) {
+        unhideBtn.outerHTML = `<button class="card-btn hide-btn" data-action="hide" data-id="${id}" title="Hide">🚫</button>`;
+      }
+    }
+  }
+}
+
+function unhideAll() {
+  saveHidden(new Set());
+  renderHiddenPanel();
+  if (currentView === 'hidden') renderHiddenView();
+  else fetchAndRender(false);
+}
+
+// ── Hidden panel (sidebar) ────────────────────────────────────────────────────
+function renderHiddenPanel() {
+  const hidden = getHidden();
+  const list = document.getElementById('hiddenList');
+  document.getElementById('hiddenCount').textContent = hidden.size;
+  if (hidden.size === 0) {
+    list.innerHTML = '<div class="hidden-empty">No hidden games.</div>';
+    return;
+  }
+  const names = getHiddenNames();
+  list.innerHTML = [...hidden].map(id => `
+    <div class="hidden-item">
+      <span title="${escHtml(names[id] || id)}">${escHtml(names[id] || id)}</span>
+      <button data-unhide="${escHtml(id)}">Show</button>
+    </div>`).join('');
+}
+
+// Store names for hidden games so we can show them in sidebar
+const hiddenNameCache = {};
+function rememberName(id, name) { hiddenNameCache[id] = name; syncHiddenNameCache(); }
+function syncHiddenNameCache() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('ps5_hnames') || '{}');
+    Object.assign(stored, hiddenNameCache);
+    localStorage.setItem('ps5_hnames', JSON.stringify(stored));
+  } catch {}
+}
+function getHiddenNames() {
+  try { return { ...JSON.parse(localStorage.getItem('ps5_hnames') || '{}'), ...hiddenNameCache }; } catch { return hiddenNameCache; }
+}
+
+// ── Hidden view — fetches real game data then renders full cards ───────────────
+async function renderHiddenView() {
+  const hidden = getHidden();
+  const grid = document.getElementById('gameGrid');
+
+  document.getElementById('loadMoreWrap').style.display = 'none';
+
+  if (hidden.size === 0) {
+    document.getElementById('resultCount').textContent = '0';
+    document.getElementById('totalCount').textContent = '0';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No hidden games.</div>';
+    return;
+  }
+
+  grid.innerHTML = '<div class="spinner" style="grid-column:1/-1">Loading…</div>';
+
+  const ids = [...hidden].join(',');
+  const params = buildParams(0);
+  params.set('ids', ids);
+  params.set('limit', '500');
+  const resp = await fetch(`/api/games?${params.toString()}`);
+  const data = await resp.json();
+
+  data.games.forEach(g => { gameCache[g.id] = g; rememberName(g.id, g.name); });
+
+  document.getElementById('resultCount').textContent = data.games.length;
+  document.getElementById('totalCount').textContent = data.games.length;
+  grid.innerHTML = '';
+
+  if (data.games.length === 0) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No hidden games found.</div>';
+    return;
+  }
+
+  grid.insertAdjacentHTML('beforeend', data.games.map(g => renderCard(g, true)).join(''));
+}
+
+// ── Edit modal ────────────────────────────────────────────────────────────────
+function openEditModal(game) {
+  editingGame = game;
+  editOfflineVal = game.offline_only;
+  editIsDlcVal   = game.isDLC ?? null;
+
+  document.getElementById('modalTitle').childNodes[0].textContent = 'Edit: ' + game.name + ' ';
+  document.getElementById('editSizeInitial').value = game.sizeInitialGB ?? '';
+  document.getElementById('editSizeFinal').value = game.sizeFinalGB ?? '';
+  document.getElementById('editSizeDlc').value = game.sizeDlcGB ?? '';
+  document.getElementById('editDownloads').value = game.estimatedDownloadsM ?? '';
+  document.getElementById('editGenres').value = (game.genres || []).join(', ');
+  document.getElementById('saveStatus').textContent = '';
+  document.getElementById('saveStatus').className = 'save-status';
+  syncOfflineBtns();
+  syncIsDlcBtns();
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.add('hidden');
+  editingGame = null;
+}
+
+function syncOfflineBtns() {
+  document.getElementById('editOfflineNull').classList.toggle('active', editOfflineVal === null);
+  document.getElementById('editOfflineTrue').classList.toggle('active', editOfflineVal === true);
+  document.getElementById('editOfflineFalse').classList.toggle('active', editOfflineVal === false);
+}
+
+function syncIsDlcBtns() {
+  document.getElementById('editIsDlcNull').classList.toggle('active',  editIsDlcVal === null);
+  document.getElementById('editIsDlcFalse').classList.toggle('active', editIsDlcVal === false);
+  document.getElementById('editIsDlcTrue').classList.toggle('active',  editIsDlcVal === true);
+}
+
+document.querySelectorAll('.offline-opt[data-val]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.val;
+    editOfflineVal = v === 'null' ? null : v === 'true';
+    syncOfflineBtns();
+  });
+});
+
+document.querySelectorAll('.offline-opt[data-dlc]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.dlc;
+    editIsDlcVal = v === 'null' ? null : v === 'true';
+    syncIsDlcBtns();
+  });
+});
+
+document.getElementById('modalClose').addEventListener('click', closeEditModal);
+document.getElementById('btnCancel').addEventListener('click', closeEditModal);
+document.getElementById('editModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeEditModal(); });
+
+document.getElementById('btnSave').addEventListener('click', async () => {
+  if (!editingGame) return;
+  const status = document.getElementById('saveStatus');
+  status.textContent = 'Saving…';
+  status.className = 'save-status';
+
+  const genresRaw = document.getElementById('editGenres').value;
+  const genres = genresRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  const body = {
+    sizeInitialGB: parseFloatOrNull(document.getElementById('editSizeInitial').value),
+    sizeFinalGB: parseFloatOrNull(document.getElementById('editSizeFinal').value),
+    sizeDlcGB: parseFloatOrNull(document.getElementById('editSizeDlc').value),
+    estimatedDownloadsM: parseFloatOrNull(document.getElementById('editDownloads').value),
+    offline_only: editOfflineVal,
+    isDLC: editIsDlcVal,
+    genres,
+  };
+
+  try {
+    const resp = await fetch(`/api/games/${editingGame.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+
+    // Update local game object and re-render its card
+    Object.assign(editingGame, body);
+    const card = document.querySelector(`.game-card[data-id="${editingGame.id}"]`);
+    if (card) card.outerHTML = renderCard(editingGame);
+
+    status.textContent = '✓ Saved';
+    setTimeout(closeEditModal, 800);
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'save-status err';
+  }
+});
+
+function parseFloatOrNull(v) {
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function scoreBadgeClass(score) {
+  if (score === null || score === undefined) return 'na';
+  if (score >= 80) return 'great';
+  if (score >= 60) return 'ok';
+  return 'bad';
+}
+
+function fmt(v, unit = '') {
+  if (v === null || v === undefined) return '—';
+  return v + unit;
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderCard(game, isHiddenView = false) {
+  const favs = getFavs(); const played = getPlayed(); const upnext = getUpnext(); const snoozed = getSnoozed(); const hidden = getHidden();
+  const scoreClass = scoreBadgeClass(game.score);
+  const scoreLabel = game.score !== null ? game.score : 'N/A';
+  const isFav      = favs.has(game.id);
+  const isPlayed   = played.has(game.id);
+  const isUpnext   = upnext.has(game.id);
+  const isSnoozed  = snoozed.has(game.id);
+  const isHidden   = !isHiddenView && hidden.has(game.id);
+  const id = escHtml(game.id);
+  const extraClass = [
+    isFav      ? 'is-fav'      : '',
+    isSnoozed  ? 'is-snoozed'  : '',
+    isPlayed   ? 'is-played'   : '',
+    isUpnext   ? 'is-upnext'   : '',
+    (isHiddenView || isHidden) ? 'is-hidden-card' : '',
+  ].filter(Boolean).join(' ');
+  return `
+    <div class="game-card${extraClass ? ' ' + extraClass : ''}" data-id="${id}">
+      <div class="card-thumb">
+        <img src="${game.imageUrl || ''}" alt="${escHtml(game.name)}"
+             onerror="this.classList.add('broken');this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22120%22><rect fill=%22%2312121a%22 width=%22200%22 height=%22120%22/><text x=%2250%25%22 y=%2250%25%22 fill=%22%23444%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2212%22>No Image</text></svg>'">
+        <div class="score-badge ${scoreClass}">${scoreLabel}</div>
+        <div class="card-actions">
+          <button class="card-btn fav-btn${isFav ? ' active' : ''}" data-action="fav" data-id="${id}" title="Favorite" style="${isFav ? 'color:var(--fav)' : ''}">⭐</button>
+          <button class="card-btn snoozed-btn${isSnoozed ? ' active' : ''}" data-action="snoozed" data-id="${id}" title="Snoozed" style="${isSnoozed ? 'color:var(--snoozed)' : ''}">💤</button>
+          <button class="card-btn played-btn${isPlayed ? ' active' : ''}" data-action="played" data-id="${id}" title="Mark as Played" style="${isPlayed ? 'color:var(--played)' : ''}">✅</button>
+          <button class="card-btn upnext-btn${isUpnext ? ' active' : ''}" data-action="upnext" data-id="${id}" title="Up Next" style="${isUpnext ? 'color:var(--upnext)' : ''}">🎮</button>
+          ${(isHiddenView || isHidden)
+            ? `<button class="card-btn" data-unhide="${id}" title="Unhide" style="color:var(--score-green)">👁</button>`
+            : `<button class="card-btn hide-btn" data-action="hide" data-id="${id}" title="Hide">🚫</button>`
+          }
+          <button class="card-btn edit-btn" data-action="edit" data-id="${id}" title="Edit">✏️</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title"><a href="${game.url}" target="_blank" rel="noopener">${escHtml(game.name)}</a>${game.isDLC ? '<span class="dlc-badge">DLC</span>' : ''}</div>
+        <div class="card-genres">${escHtml((game.genres || []).join(', ') || '—')}</div>
+        <div class="card-stats">
+          <div class="stat"><div class="label">Launch</div><div class="value">${fmt(game.sizeInitialGB, ' GB')}</div></div>
+          <div class="stat"><div class="label">Updated</div><div class="value">${fmt(game.sizeFinalGB, ' GB')}</div></div>
+          <div class="stat"><div class="label">DLC</div><div class="value">${fmt(game.sizeDlcGB, ' GB')}</div></div>
+          <div class="stat"><div class="label">Downloads</div><div class="value">${fmt(game.estimatedDownloadsM, 'M')}</div></div>
+          <div class="stat" style="grid-column:1/-1"><div class="label">Connectivity</div><div class="value">${game.offline_only === true ? '📴 Offline' : game.offline_only === false ? '🌐 Online req.' : '—'}</div></div>
+        </div>
+        ${game.releaseDate ? `<div class="card-date">${escHtml(game.releaseDate)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+const gameCache = {};
+
+// ── Fetch & render ────────────────────────────────────────────────────────────
+function buildParams(off = 0) {
+  const p = new URLSearchParams();
+  p.set('limit', LIMIT);
+  p.set('offset', off);
+  p.set('sort', document.getElementById('sort').value);
+  p.set('order', document.getElementById('order').value);
+
+  const search = document.getElementById('search').value.trim();
+  if (search) p.set('search', search);
+
+  const ranges = ['score', 'sizeInitial', 'sizeFinal', 'sizeDlc', 'downloads'];
+  ranges.forEach(key => {
+    const minEl = document.getElementById(key + 'Min');
+    const maxEl = document.getElementById(key + 'Max');
+    if (!minEl || !maxEl) return;
+    const absMin = parseFloat(minEl.min);
+    const absMax = parseFloat(maxEl.max);
+    const curMin = parseFloat(minEl.value);
+    const curMax = parseFloat(maxEl.value);
+    if (curMin > absMin) p.set(key + 'Min', curMin);
+    if (curMax < absMax) p.set(key + 'Max', curMax);
+  });
+
+  const checked = [...document.querySelectorAll('.genre-chip input:checked')].map(el => el.value);
+  if (checked.length) p.set('genres', checked.join(','));
+  if (offlineFilter !== null) p.set('offlineOnly', offlineFilter);
+  if (isDlcFilter !== null)  p.set('isDLC', isDlcFilter);
+
+  return p;
+}
+
+async function fetchAndRender(append = false) {
+  if (currentView === 'hidden') { await renderHiddenView(); return; }
+
+  const grid = document.getElementById('gameGrid');
+  if (!append) {
+    grid.innerHTML = '<div class="spinner" style="grid-column:1/-1">Loading…</div>';
+    offset = 0;
+  }
+
+  const hidden = getHidden();
+  const favs = getFavs();
+  const params = buildParams(append ? offset : 0);
+
+  // List views (fav/played/upnext): request only the relevant IDs
+  const listViews = { fav: [...favs], played: [...getPlayed()], upnext: [...getUpnext()], snoozed: [...getSnoozed()] };
+  const emptyMessages = {
+    fav:      'No favorites yet. Star a game to add it here.',
+    snoozed:  'Snoozed list is empty. Mark games you\'ll play someday.',
+    played:   'No played games yet. Mark a game as played to add it here.',
+    upnext:   'Nothing in Up Next yet. Add a game you\'re excited to play.',
+  };
+  if (currentView in listViews) {
+    const ids = listViews[currentView];
+    if (ids.length === 0) {
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${emptyMessages[currentView]}</div>`;
+      document.getElementById('resultCount').textContent = '0';
+      document.getElementById('totalCount').textContent = '0';
+      document.getElementById('loadMoreWrap').style.display = 'none';
+      return;
+    }
+    params.set('ids', ids.join(','));
+    params.set('limit', '500');
+  }
+
+  const resp = await fetch('/api/games?' + params.toString());
+  const data = await resp.json();
+
+  const played = getPlayed();
+  const snoozedSet = getSnoozed();
+  let games = data.games.filter(g => {
+    if (currentView === 'all' && hidden.has(g.id)) return false;
+    if (currentView === 'all' && played.has(g.id)) return false;
+    if (currentView === 'all' && snoozedSet.has(g.id)) return false;
+    return true;
+  });
+
+  games.forEach(g => { gameCache[g.id] = g; });
+
+  if (currentView in { fav:1, played:1, upnext:1, snoozed:1 }) {
+    document.getElementById('resultCount').textContent = games.length;
+    document.getElementById('totalCount').textContent = games.length;
+    document.getElementById('loadMoreWrap').style.display = 'none';
+  } else {
+    document.getElementById('resultCount').textContent = data.total;
+    document.getElementById('totalCount').textContent = meta ? meta.totalGames : data.total;
+  }
+
+  if (!append) grid.innerHTML = '';
+
+  if (games.length === 0 && !append) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No games match your filters.</div>';
+  } else {
+    grid.insertAdjacentHTML('beforeend', games.map(g => renderCard(g)).join(''));
+  }
+
+  offset = (append ? offset : 0) + data.games.length;
+  const loadMoreWrap = document.getElementById('loadMoreWrap');
+  if (!(currentView in { fav:1, played:1, upnext:1, snoozed:1 })) {
+    loadMoreWrap.style.display = offset < data.total ? 'block' : 'none';
+  }
+}
+
+function debounce(fn, ms = 300) {
+  return (...args) => { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => fn(...args), ms); };
+}
+const debouncedFetch = debounce(() => fetchAndRender(false));
+
+// ── Range sliders ─────────────────────────────────────────────────────────────
+function initRange(key, minId, maxId, minLblId, maxLblId, unit = '') {
+  const minEl = document.getElementById(minId);
+  const maxEl = document.getElementById(maxId);
+  const minLbl = document.getElementById(minLblId);
+  const maxLbl = document.getElementById(maxLblId);
+  function sync() {
+    let lo = parseFloat(minEl.value), hi = parseFloat(maxEl.value);
+    if (lo > hi) { lo = hi; minEl.value = lo; }
+    minLbl.textContent = lo + unit;
+    maxLbl.textContent = hi + unit;
+  }
+  minEl.addEventListener('input', () => { sync(); debouncedFetch(); });
+  maxEl.addEventListener('input', () => { sync(); debouncedFetch(); });
+  sync();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const metaResp = await fetch('/api/meta');
+  meta = await metaResp.json();
+
+  document.getElementById('db-count').textContent = `${meta.totalGames} games in DB`;
+  document.getElementById('totalCount').textContent = meta.totalGames;
+
+  function setSlider(id, min, max) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.min = 0; el.max = max;
+    if (id.endsWith('Min')) el.value = 0;
+    if (id.endsWith('Max')) el.value = max;
+  }
+
+  const r = meta.ranges;
+  setSlider('scoreMin', r.score.min, r.score.max);
+  setSlider('scoreMax', r.score.min, r.score.max);
+  setSlider('sizeInitialMin', r.sizeInitial.min, r.sizeInitial.max);
+  setSlider('sizeInitialMax', r.sizeInitial.min, r.sizeInitial.max);
+  setSlider('sizeFinalMin', r.sizeFinal.min, r.sizeFinal.max);
+  setSlider('sizeFinalMax', r.sizeFinal.min, r.sizeFinal.max);
+  setSlider('sizeDlcMin', r.sizeDlc.min, r.sizeDlc.max);
+  setSlider('sizeDlcMax', r.sizeDlc.min, r.sizeDlc.max);
+  setSlider('downloadsMin', r.downloads.min, r.downloads.max);
+  setSlider('downloadsMax', r.downloads.min, r.downloads.max);
+
+  initRange('score', 'scoreMin', 'scoreMax', 'scoreMinLbl', 'scoreMaxLbl');
+  initRange('sizeInitial', 'sizeInitialMin', 'sizeInitialMax', 'sizeInitialMinLbl', 'sizeInitialMaxLbl', ' GB');
+  initRange('sizeFinal', 'sizeFinalMin', 'sizeFinalMax', 'sizeFinalMinLbl', 'sizeFinalMaxLbl', ' GB');
+  initRange('sizeDlc', 'sizeDlcMin', 'sizeDlcMax', 'sizeDlcMinLbl', 'sizeDlcMaxLbl', ' GB');
+  initRange('downloads', 'downloadsMin', 'downloadsMax', 'downloadsMinLbl', 'downloadsMaxLbl', 'M');
+
+  // Genre chips
+  const genreList = document.getElementById('genreList');
+  genreList.innerHTML = meta.genres.map(g => `
+    <label class="genre-chip">
+      <input type="checkbox" value="${escHtml(g)}">
+      <span>${escHtml(g)}</span>
+    </label>`).join('');
+  genreList.querySelectorAll('input').forEach(el => el.addEventListener('change', () => fetchAndRender(false)));
+
+  // Offline toggle
+  function setOfflineFilter(val) {
+    offlineFilter = val;
+    document.getElementById('offlineAll').classList.toggle('active', val === null);
+    document.getElementById('offlineYes').classList.toggle('active', val === true);
+    document.getElementById('offlineNo').classList.toggle('active', val === false);
+    fetchAndRender(false);
+  }
+  document.getElementById('offlineAll').addEventListener('click', () => setOfflineFilter(null));
+  document.getElementById('offlineYes').addEventListener('click', () => setOfflineFilter(true));
+  document.getElementById('offlineNo').addEventListener('click', () => setOfflineFilter(false));
+
+  // isDLC toggle
+  function setDlcFilter(val) {
+    isDlcFilter = val;
+    document.getElementById('dlcAll').classList.toggle('active', val === null);
+    document.getElementById('dlcNo').classList.toggle('active', val === false);
+    document.getElementById('dlcYes').classList.toggle('active', val === true);
+    fetchAndRender(false);
+  }
+  document.getElementById('dlcAll').addEventListener('click', () => setDlcFilter(null));
+  document.getElementById('dlcNo').addEventListener('click',  () => setDlcFilter(false));
+  document.getElementById('dlcYes').addEventListener('click', () => setDlcFilter(true));
+
+  // View tabs
+  const tabIds = { all: 'tabAll', fav: 'tabFav', snoozed: 'tabSnoozed', hidden: 'tabHidden', played: 'tabPlayed', upnext: 'tabUpnext' };
+  function setView(v) {
+    currentView = v;
+    Object.entries(tabIds).forEach(([key, id]) => document.getElementById(id).classList.toggle('active', key === v));
+    fetchAndRender(false);
+  }
+  Object.entries(tabIds).forEach(([v, id]) => document.getElementById(id).addEventListener('click', () => setView(v)));
+
+  // Hidden panel collapsible
+  document.getElementById('hiddenPanelToggle').addEventListener('click', () => {
+    document.getElementById('hiddenPanel').classList.toggle('collapsed');
+  });
+
+  // Hidden panel — unhide single item via delegation
+  document.getElementById('hiddenList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-unhide]');
+    if (!btn) return;
+    unhideGame(btn.dataset.unhide);
+  });
+  document.getElementById('btnUnhideAll').addEventListener('click', unhideAll);
+  renderHiddenPanel();
+
+  // Search / sort
+  document.getElementById('search').addEventListener('input', debouncedFetch);
+  document.getElementById('sort').addEventListener('change', () => fetchAndRender(false));
+  document.getElementById('order').addEventListener('change', () => fetchAndRender(false));
+
+  // Card action delegation — fav / hide / edit / unhide buttons
+  document.getElementById('gameGrid').addEventListener('click', e => {
+    const unhideBtn = e.target.closest('[data-unhide]');
+    if (unhideBtn) { e.stopPropagation(); unhideGame(unhideBtn.dataset.unhide); return; }
+
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    e.stopPropagation();
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+    if (action === 'fav') {
+      toggleFav(id);
+    } else if (action === 'played') {
+      togglePlayed(id);
+    } else if (action === 'upnext') {
+      toggleUpnext(id);
+    } else if (action === 'snoozed') {
+      toggleSnoozed(id);
+    } else if (action === 'hide') {
+      const game = gameCache[id];
+      if (game) rememberName(id, game.name);
+      hideGame(id);
+    } else if (action === 'edit') {
+      const game = gameCache[id];
+      if (game) openEditModal(game);
+    }
+  });
+
+  // Load more
+  document.getElementById('btnLoadMore').addEventListener('click', () => fetchAndRender(true));
+
+  // Reset
+  document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('search').value = '';
+    document.getElementById('sort').value = 'score';
+    document.getElementById('order').value = 'desc';
+    document.querySelectorAll('.genre-chip input').forEach(el => { el.checked = false; });
+    offlineFilter = null;
+    document.getElementById('offlineAll').classList.add('active');
+    document.getElementById('offlineYes').classList.remove('active');
+    document.getElementById('offlineNo').classList.remove('active');
+    isDlcFilter = null;
+    document.getElementById('dlcAll').classList.add('active');
+    document.getElementById('dlcNo').classList.remove('active');
+    document.getElementById('dlcYes').classList.remove('active');
+    ['scoreMin','sizeInitialMin','sizeFinalMin','sizeDlcMin','downloadsMin'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = el.min;
+    });
+    ['scoreMax','sizeInitialMax','sizeFinalMax','sizeDlcMax','downloadsMax'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = el.max;
+    });
+    initRange('score', 'scoreMin', 'scoreMax', 'scoreMinLbl', 'scoreMaxLbl');
+    initRange('sizeInitial', 'sizeInitialMin', 'sizeInitialMax', 'sizeInitialMinLbl', 'sizeInitialMaxLbl', ' GB');
+    initRange('sizeFinal', 'sizeFinalMin', 'sizeFinalMax', 'sizeFinalMinLbl', 'sizeFinalMaxLbl', ' GB');
+    initRange('sizeDlc', 'sizeDlcMin', 'sizeDlcMax', 'sizeDlcMinLbl', 'sizeDlcMaxLbl', ' GB');
+    initRange('downloads', 'downloadsMin', 'downloadsMax', 'downloadsMinLbl', 'downloadsMaxLbl', 'M');
+    fetchAndRender(false);
+  });
+
+  fetchAndRender(false);
+}
+
+init().catch(err => {
+  document.getElementById('gameGrid').innerHTML = `<div class="empty" style="grid-column:1/-1">Error loading data: ${err.message}</div>`;
+});
+</script>
+
+</body>
+</html>
