@@ -36,7 +36,7 @@ const { Low, JSONFile } = require('lowdb');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const API_KEY   = process.env.GEMINI_API_KEY || 'AIzaSyC478AHWQ60GvIGrTMmROhhHa9gw8ddrZc';
+const API_KEY   = process.env.GEMINI_API_KEY;
 const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '200', 10);
 const DELAY_MS   = parseInt(process.env.DELAY_MS   || '2000', 10);
 const TEST_MODE  = process.argv.includes('--test');
