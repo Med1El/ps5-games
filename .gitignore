@@ -8,6 +8,7 @@ apply-all-enrichment.sh
 data/enrichments
 data/gemini-enrichments
 data/games - Copy.json
+/data/games.json
 
 # Scratch / reference HTML
 files
@@ -20,3 +21,4 @@ files
 
 CLAUDE.md
 .vercel
+/data
