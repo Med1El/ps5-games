@@ -2,9 +2,6 @@
 node_modules
 
 # Enrichment pipeline — already applied into data/games.json, not needed at runtime
-scripts
-scraper.js
-apply-all-enrichment.sh
 data/enrichments
 data/gemini-enrichments
 data/games - Copy.json
@@ -19,6 +16,4 @@ files
 .env.local
 *.log
 
-CLAUDE.md
 .vercel
-/data
