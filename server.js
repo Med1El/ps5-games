@@ -3,7 +3,8 @@ const path = require('path');
 // lowdb@2 is ESM-only ("type": "module"), so it must be loaded via dynamic
 // import() from this CommonJS file — require() throws ERR_REQUIRE_ESM on Vercel.
 
-const DB_PATH = path.join(__dirname, 'data', 'games.json');
+const DB_PATH        = path.join(__dirname, 'data', 'games.json');
+const DB_UPDATE_PATH = path.join(__dirname, 'data', 'games_update1.json');
 const PORT = process.env.PORT || 3000;
 
 const app = express();
@@ -15,11 +16,27 @@ let dbReady;
 
 async function initDb() {
   const { Low, JSONFile } = await import('lowdb');
+
+  // Load main DB
   const adapter = new JSONFile(DB_PATH);
   db = new Low(adapter);
   await db.read();
   db.data = db.data || { games: [] };
-  console.log(`DB loaded: ${db.data.games.length} games`);
+
+  // Load update file if it exists, merge into db.data.games (deduped by id)
+  const fs = require('fs');
+  if (fs.existsSync(DB_UPDATE_PATH)) {
+    const raw = JSON.parse(fs.readFileSync(DB_UPDATE_PATH, 'utf8'));
+    const updateGames = Array.isArray(raw.games) ? raw.games : [];
+    if (updateGames.length > 0) {
+      const existingIds = new Set(db.data.games.map(g => g.id));
+      const newGames = updateGames.filter(g => !existingIds.has(g.id));
+      db.data.games = db.data.games.concat(newGames);
+      console.log(`Update file loaded: ${updateGames.length} entries, ${newGames.length} new games merged`);
+    }
+  }
+
+  console.log(`DB loaded: ${db.data.games.length} games total`);
 }
 
 // Lazily load the DB once per serverless instance (and reuse on warm invocations).
@@ -212,7 +229,8 @@ app.patch('/api/games/:id', async (req, res) => {
 });
 
 app.post('/api/reload', async (req, res) => {
-  await db.read();
+  dbReady = null;
+  await ensureDb();
   res.json({ ok: true, games: db.data.games.length });
 });
 

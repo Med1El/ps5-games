@@ -5,11 +5,15 @@
   "main": "server.js",
   "scripts": {
     "scrape": "node scraper.js",
+    "scrape:update": "node scrape-update.js",
     "start": "node server.js",
     "migrate": "node scripts/migrate-to-nested.js",
     "gemini:test": "node scripts/gemini-enrich.js --test",
     "gemini:run": "node scripts/gemini-enrich.js --apply",
-    "gemini:apply": "node scripts/apply-gemini-enrichment.js"
+    "gemini:apply": "node scripts/apply-gemini-enrichment.js",
+    "gemini:update:test": "node scripts/gemini-enrich-update.js --test",
+    "gemini:update:run": "node scripts/gemini-enrich-update.js --apply",
+    "gemini:update:apply": "node scripts/apply-gemini-enrichment-update.js --all"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
